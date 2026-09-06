@@ -1,0 +1,43 @@
+name: 'build-test'
+on: # rebuild any PRs and main branch changes
+  pull_request:
+  push:
+
+jobs:
+  build: # make sure build/ci work properly
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          npm install
+      - run: |
+          npm run all
+  test: # make sure the action works on a clean machine without building
+    name: Test (PHP ${{ matrix.php }}, PM ${{ matrix.pm-version-major }}, ${{ matrix.image }})
+    runs-on: ${{ matrix.image }}
+    strategy:
+      matrix:
+        php: [8.1, 8.2]
+        pm-version-major: [4, 5]
+        image: [ubuntu-20.04, ubuntu-22.04, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./
+        with:
+          php-version: ${{ matrix.php }}
+          install-path: ${{ github.workspace }}/bin
+          pm-version-major: ${{ matrix.pm-version-major }}
+
+      - name: Test that that PHP has been added to PATH correctly
+        run: which php | grep '${{ github.workspace }}/bin'
+
+      - name: Test that PHP is installed and working
+        run: php -i
+
+      - name: Test that Composer has been added to PATH correctly
+        run: which composer | grep '${{ github.workspace }}/bin'
+
+      - name: Test that Composer is installed and working
+        run: composer --version
